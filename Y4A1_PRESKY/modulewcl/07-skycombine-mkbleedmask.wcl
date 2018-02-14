@@ -59,7 +59,7 @@
                 rundir = binned-fp
 
                 # whether to bring file home
-                savefiles = false
+                savefiles = true
             </bleedmask_binned_fp>
         </file>
         <exec_1>
