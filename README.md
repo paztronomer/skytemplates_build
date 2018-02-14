@@ -26,6 +26,9 @@
 
 1. Run the following steps
     1. crosstalk-sci
-    1. pixcorrect
-    1. mkbleedmask
+    1. pixcorrect (save outputs)
     1. skycompress-mkbleedmask
+    1. skycombine-mkbleedmask (save outputs)
+    * **Note** as we are stacking many exposures, make bleed masks can be avoided, just as a statistic consequence.
+
+1. I modified a template for `widefield` to only run the above steps. As these steps assume `mkbleedmask` ran, I modified the *wcl* files to use `pixcorrect` outputs. The `bleedmask-mini` are not specifically generated from *bleedmasked* but from *pixcorrected*
