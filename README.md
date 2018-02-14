@@ -32,3 +32,8 @@
     * **Note** as we are stacking many exposures, make bleed masks can be avoided, just as a statistic consequence.
 
 1. I modified a template for `widefield` to only run the above steps. As these steps assume `mkbleedmask` ran, I modified the *wcl* files to use `pixcorrect` outputs. The `bleedmask-mini` are not specifically generated from *bleedmasked* but from *pixcorrected*
+
+1. A typical call would be
+    ```
+    submit_widefield.py --db_section db-desoper --list expnum_y4_e1_r.csv --campaign Y4A1_PRESKY --target_site CampusClusterSmall --archive_name desar2home --project OPS --jira_summary 'prep skytemplate Y4A1' --eups_stack finalcut Y4A1+5 --queue_size 50 --calnite 20160921t1003 --calrun r3335p02 --ignore_processed
+```
