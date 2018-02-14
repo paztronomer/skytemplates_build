@@ -1,0 +1,97 @@
+<module>
+    <skycompress-mkbleedmask>
+        wrappername = genwrap.py
+        wrapperloop = ccdnum, band
+        modnamepat = ${modnamepat_ccdnumband}
+        loopobj = file.red_pixcor       
+        <file>
+            # Here put pixcorrect output files
+            # changed red_bleedmasked >> red_pixcor 
+            # and bleedmask_mini >> pixcor_mini_red
+            <red_pixcor>
+                # what metadata to get
+                filetype = red_pixcor
+                # how to name the file
+                filepat = ccdnum_band
+                flabel = pixcor
+                fsuffix = fits
+                # where to put the file
+                dirpat = se
+                rundir = red/pixcor
+            </red_pixcor>
+            #
+            ###########Copied from pixcorrect.wcl
+            #<pixcor_mini_red>
+            #    # what metadata to get
+            #    filetype = pixcor_mini_red
+            #
+            #    # how to name the file
+            #    filepat = ccdnum_band
+            #    flabel = pixcor-mini-red
+            #    fsuffix = fits
+            #
+            #    # where to put the file
+            #    dirpat = se
+            #    ops_enddir = mini
+            #    rundir = mini
+            #
+            #    # whether to bring file home
+            #    # savefiles = false
+            #    savefiles = true
+            #</pixcor_mini_red>
+            ###########################################
+            #<red_bleedmasked>
+            #    filetype = red_mkbleedmask
+            #    filepat = ccdnum_band
+            #    flabel = bleedmasked
+            #    fsuffix = fits
+            #    dirpat = se
+            #    ops_enddir = red/bleedmask
+            #    rundir = red/bleedmask
+            #</red_bleedmasked>
+            ###########################################
+            <bleedmask_mini>
+                # what metadata to get
+                filetype = bleedmask_mini
+            
+                # how to name the file
+                filepat = ccdnum_band
+                flabel = bleedmask-mini
+                fsuffix = fits
+            
+                # where to put the file
+                dirpat = se
+                ops_enddir = mini
+                rundir = mini
+            
+                # whether to bring file home
+                # savefiles = false
+                savefiles = true
+            </bleedmask_mini>
+        </file>
+        <exec_1>
+            execname = sky_compress
+            cmd_hyphen = mixed_gnu
+            #
+            #############Changed#########
+            #used = file.red_bleedmasked
+            #was_generated_by = file.bleedmask_mini
+            #ancestry = file.red_bleedmasked:file.bleedmask_mini
+            #<cmdline>
+            #    in = ${file.red_bleedmasked.fullname}
+            #    skyfilename =  ${file.bleedmask_mini.fullname}
+            #    blocksize = 128
+            #</cmdline>
+            #############################
+            #
+            used = file.red_pixcor
+            was_generated_by = file.bleedmask_mini
+            ancestry = file.red_pixcor:file.bleedmask_mini
+            <cmdline>
+                in = ${file.red_pixcor.fullname}
+                skyfilename =  ${file.bleedmask_mini.fullname}
+                blocksize = 128
+            </cmdline>
+        </exec_1>
+    </skycompress-mkbleedmask>
+</module>
