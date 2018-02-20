@@ -1,0 +1,20 @@
+To create the inputs list for sky_pca
+=====================================
+
+Note: need to merge both paths and add the prefix '/archive_data...'
+DB ~> select fai.path, fai.filename from file_archive_info fai, pfw_attempt att, desfile d, exposure e where att.reqnum=3348 and fai.filename=d.filename and d.pfw_attempt_id=att.id and d.filetype='bleedmask_binned_fp' and CONCAT('D00', e.expnum)=att.unitname and att.attnum=2 and e.band='g' order by att.unitname; > g_bleedmask_binned_fp_y4e1.csv
+
+To create the list of inputs for sky_template
+=============================================
+
+Note: the below query produces duplicates, so must be pre-treated
+DESDB ~> select e.expnum, fai.path, fai.filename from file_archive_info fai, pfw_attempt att, desfile d, exposure e where att.reqnum=3348 and fai.filename=d.filename and d.pfw_attempt_id=att.id and d.filetype='red_pixcor' and CONCAT('D00', e.expnum)=att.unitname and att.attnum=2 and fai.filename like '%_c03_%' and e.band='g' order by att.unitname; > g_red_pixcor_y4e1_c03.csv
+
+To easily work with the fits.fz to operate on
+=============================================
+
+gawk '{printf("ln -s %s . \n", $1);}' g_red_pixcor_y4e1_c03_XT45x.csv > junk.list
+mkdir g_c03_XT45x
+cd g_c03_XT45x
+source junk.list
+funpack *fits.fz
