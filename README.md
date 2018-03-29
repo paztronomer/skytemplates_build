@@ -15,7 +15,7 @@ run of **sky_pca** to produce the number of PCA components, and
 survey, and reasonably good `T_EFF` (measured from `B_EFF` and `C_EFF`). Notice
 that we need to decrease/increase the threshold value depending on the band, to
 get about 600 exposures
-  ```SQL
+   ```SQL
      with w as (select expnum, max(lastchanged_time) maxtime
                 from finalcut_eval
                 where analyst!='SNQUALITY' group by expnum)
@@ -32,8 +32,7 @@ get about 600 exposures
         and fcut.lastchanged_time=w.maxtime
         and fcut.t_eff > 0.9
         order by fcut.t_eff; > explist_{year}_{epoch}_{band}.csv
- ```
-
+   ```
 1. With the list of exposures, apply further selection criteria. Example: avoid
 the vicinity of 20171110 when the *mysterious* lightbulb appeared.
 
@@ -61,13 +60,12 @@ For the version using *mkbleedmask*, it also needs information from the WCS to
 be calculated beforehand (SExtractor). I don't have the *campaign* to do this
 
 1. Get the list of exposure numbers from the .csv created few steps ago
-  ```
+    ```
     awk -F "," '{print $1}' {some csv file}
     cat {some csv file} | cut -d, -f1
-  ```
-
+    ```
 1. A typical call would be
-  ```
+    ```
     submit_widefield.py
     --db_section db-desoper
     --list {expnum list}
@@ -78,7 +76,7 @@ be calculated beforehand (SExtractor). I don't have the *campaign* to do this
     --eups_stack finalcut Y4A1+5
     --queue_size 50 --calnite 20160921t1003 --calrun r3335p02
     --ignore_processed
-  ```
+    ```
 With the results of the above, the last 2 steps of the skytemplates creation
 can be achieved
 
@@ -86,7 +84,7 @@ can be achieved
 
 1. First, create the list of binned focal plane images to be input to `sky_pca`
 from which the 4 components will be calculated
-  ```SQL
+    ```SQL
     select fai.path, fai.filename
     from file_archive_info fai, pfw_attempt att, desfile d, exposure e
     where att.reqnum={REQNUM}
@@ -97,15 +95,13 @@ from which the 4 components will be calculated
       and CONCAT('D00', e.expnum)=att.unitname
       and e.band={BAND}
       order by fai.filename; > {bleedmask binned fp images}
-  ```
-
+    ```
 1. Modify the output CSV to be used as input list
-  ```bash
+    ```bash
     awk -F "," '{print "/archive_data/desarchive/"$1"/"$2}' {CSV as above}
-  ```
-
+    ```
 1. A typical call to `sky_pca` should be something like
-  ```bash
+    ```bash
     sky_pca -i {bleedmask binned fp paths}
     -o {PCA mini n04}
     -n 4
@@ -113,15 +109,15 @@ from which the 4 components will be calculated
     -s {full filename path to save config}
     -l {full filename path to save logs}
     -v
-  ```
+    ```
 using the following RMS values for rejection
 
-band | RMS reject value
-=====|=================
-   g | 0.008
-   r | 0.005
-   i | 0.005
-   z | 0.003
-   Y | 0.004
+|band | RMS reject value|
+|:---:|:---------------:|
+|   g | 0.008           |
+|   r | 0.005           |
+|   i | 0.005           |
+|   z | 0.003           |
+|   Y | 0.004           |
 
 ### Create the skytemplate for unbinned CCDs
