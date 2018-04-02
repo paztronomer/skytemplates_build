@@ -85,11 +85,11 @@ can be achieved
 1. First, create the list of binned focal plane images to be input to `sky_pca`
 from which the 4 components will be calculated
     ```SQL
-    select fai.path, fai.filename
+    select distinct(fai.path, fai.filename)
     from file_archive_info fai, pfw_attempt att, desfile d, exposure e
     where att.reqnum={REQNUM}
       and att.attnum=1
-      and fai.filename=d.filename
+      and fai.filename=d.filename -- also fai.desfile_id=d.id
       and d.pfw_attempt_id=att.id
       and d.filetype='bleedmask_binned_fp'
       and CONCAT('D00', e.expnum)=att.unitname
@@ -121,3 +121,34 @@ using the following RMS values for rejection
 |   Y | 0.004           |
 
 ### Create the skytemplate for un-binned CCDs
+
+1. First, create a list per CCD for the reduced images to be used for the
+sky template. Note use of `miscfile` table doesn't work because don't have
+entries for *red_pixcor* filtype.  
+    ```SQL
+    select e.expnum, fai.path, fai.filename, fai.compression
+    from file_archive_info fai, pfw_attempt att, desfile d, exposure e
+    where att.reqnum={REQNUM}
+        and att.attnum={ATTNUM}
+        and fai.desfile_id=d.id
+        and d.pfw_attempt_id=att.id
+        and d.filetype='red_pixcor'
+        and CONCAT('D00', e.expnum)=att.unitname
+        and fai.filename like '%_c{0:2d CCDNUM}_%'
+        and e.band={BAND}
+        order by att.unitname; > {pixcor list per CCD}
+    ```
+
+1. If doing it in `bash` can use:
+    ```bash
+    awk -F "," '{print $1 " /archive_data/desarchive/" $2 "/" $3}' {CSV as above}
+    ```
+
+using a expnum, fullptah space-separated table
+
+sky_template --saveconfig config/skytemplate_g_y5.config --log log/skytemplate_g_y5.log --infile pcamini_n04_g_y5.fits --outfilename skytemplate_n04_g_y5_tr02list.fits --ccdnum 1 --input_list junk_c01_g_y5.txt --reject_rms 0.008 --good_filename skytemplate_c01_g_y5_try02list.fits -v
+
+
+copy to local to use input_template
+
+      2 sky_template --saveconfig config/skytemplate_g_y5.config --log log/skytemplate_g_y5.log --inf    ile pcamini_n04_g_y5.fits --outfilename skytemplate_n04_g_y5.fits --ccdnum 1 --input_template     pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_r3439p01_pixcor.fits --reject_rms 0.008 --good_filenam    e skytemplate_c01_g_y5.fits -v
