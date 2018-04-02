@@ -1,10 +1,10 @@
 ### Mostly Constant ###
-camsym = D 
-photflagvar = 1    
+camsym = D
+photflagvar = 1
 bfreq = 2959
 bfatt = 1
 confignite = 20170531
-xtalkcoefffile = DECam_20130606.xtalk 
+xtalkcoefffile = DECam_20130606.xtalk
 photflatcornite = null
 scampconfigfile = ${confignite}_default.scamp.20170406
 scampupdateheadfile = ${confignite}_updateWCS.config
@@ -12,7 +12,7 @@ scampupdateheadfile = ${confignite}_updateWCS.config
 ### Added by hand for Y5
 bpmnite = 20170815t0824
 bpmreq = 3370
-bpmatt = 1
+bpmatt = 2
 calnite = 20170815t0824
 calreq = 3388
 calatt = 1
