@@ -122,7 +122,7 @@ using the following RMS values for rejection
 
 ### Create the skytemplate for un-binned CCDs
 
-#### Run CCD by CCD, by hand
+### Run CCD by CCD, by hand
 1. First, create a list per CCD for the reduced images to be used for the
 sky template. Note use of `miscfile` table doesn't work because don't have
 entries for *red_pixcor* filtype.  
@@ -169,7 +169,7 @@ entries for *red_pixcor* filtype.
             --input_template pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_rNNNNpNN_pixcor.fits
         ```
 
-#### Run using my wrapper, in parallel
+### Run using my wrapper, in parallel
 1. The code **call_skytemplate.py** is a wrapper for `sky_template`. It runs
 over the set of band and CCDs, using the ingredients coming from a single
 pipeline run (reqnum, attnum, filetype *red_pixcor*). The process is launch
@@ -181,4 +181,4 @@ chunk size will decrease the speed but will be safer, avoiding memory issues.
     ```bash
     python call_skytemplate.py --label Y5_withY2N_ch250 --chunk 250
     ```
-For more information, display the help from *call_skytemplate.py* 
+For more information, display the help from *call_skytemplate.py*
