@@ -186,8 +186,8 @@ For more information, display the help from *call_skytemplate.py*
 ## Setup of older Y2N stack
 Due to the issue *sky_pca* outputs, using actual stacks have some strange
 binning, an older must be setup.
-
 Use the following while the issue is not solved.
+
     ```bash
     source /work/apps/RHEL6/dist/eups/desdm_eups_setup.sh
     setup -r /{work devel of MY USER}/git/pipebox/
