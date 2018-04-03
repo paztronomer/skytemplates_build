@@ -182,3 +182,20 @@ chunk size will decrease the speed but will be safer, avoiding memory issues.
     python call_skytemplate.py --label Y5_withY2N_ch250 --chunk 250
     ```
 For more information, display the help from *call_skytemplate.py*
+
+## Setup of older Y2N stack
+Due to the issue *sky_pca* outputs, using actual stacks have some strange
+binning, an older must be setup.
+
+Use the following while the issue is not solved.
+    ```bash
+    source /work/apps/RHEL6/dist/eups/desdm_eups_setup.sh
+    setup -r /{work devel of MY USER}/git/pipebox/
+    setup -r /{work devel of MY USER}/svn/desdmreportingframework/trunk/
+    export DES_DB_SECTION=db-desoper
+    export X509_USER_PROXY=/home/{MY USER}/.globus/osg/user.proxy
+    setup -v Y2Nstack 1.0.6+14
+    export HISTTIMEFORMAT="%d/%m/%y %T "
+    setup -v easyaccess 1.4.2+0
+    setup -v pandas 0.15.2+2
+    ```
