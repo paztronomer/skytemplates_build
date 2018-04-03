@@ -168,3 +168,17 @@ entries for *red_pixcor* filtype.
             --input_list ExpnumPath_c01_g_y5.txt OR
             --input_template pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_rNNNNpNN_pixcor.fits
         ```
+
+#### Run using my wrapper, in parallel
+1. The code **call_skytemplate.py** is a wrapper for `sky_template`. It runs
+over the set of band and CCDs, using the ingredients coming from a single
+pipeline run (reqnum, attnum, filetype *red_pixcor*). The process is launch
+in parallel, with the ability to increase the default chunk size (1 by default)
+to a larger values, to avoid memory errors. Larger (about ~100) values of
+chunk size will decrease the speed but will be safer, avoiding memory issues.
+
+1. A typical call would be
+    ```bash
+    python call_skytemplate.py --label Y5_withY2N_ch250 --chunk 250
+    ```
+For more information, display the help from *call_skytemplate.py* 
