@@ -122,6 +122,7 @@ using the following RMS values for rejection
 
 ### Create the skytemplate for un-binned CCDs
 
+#### Run CCD by CCD, by hand
 1. First, create a list per CCD for the reduced images to be used for the
 sky template. Note use of `miscfile` table doesn't work because don't have
 entries for *red_pixcor* filtype.  
@@ -144,11 +145,26 @@ entries for *red_pixcor* filtype.
     awk -F "," '{print $1 " /archive_data/desarchive/" $2 "/" $3}' {CSV as above}
     ```
 
-using a expnum, fullptah space-separated table
-
-sky_template --saveconfig config/skytemplate_g_y5.config --log log/skytemplate_g_y5.log --infile pcamini_n04_g_y5.fits --outfilename skytemplate_n04_g_y5_tr02list.fits --ccdnum 1 --input_list junk_c01_g_y5.txt --reject_rms 0.008 --good_filename skytemplate_c01_g_y5_try02list.fits -v
-
-
-copy to local to use input_template
-
-      2 sky_template --saveconfig config/skytemplate_g_y5.config --log log/skytemplate_g_y5.log --inf    ile pcamini_n04_g_y5.fits --outfilename skytemplate_n04_g_y5.fits --ccdnum 1 --input_template     pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_r3439p01_pixcor.fits --reject_rms 0.008 --good_filenam    e skytemplate_c01_g_y5.fits -v
+1. We have 2 options
+    1. Use a table containing `expnum full_path` for all the files to be
+    used ingredients. The above `awk` line helps in construct that table.
+    In this case, the argument `--input_list ExpnumPath_c01_g_y5.txt` need
+    to be used
+    1. Copy the files and put them under the same local directory, then use
+    the argument to input a template
+    `pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_r3439p01_pixcor.fits`
+    1. Considering the above, a typical call to *sky_template*, on a CCD
+    basis would be
+        ```bash
+        sky_template
+            --saveconfig config/skytemplate_c01_g_y5.config
+            --log log/skytemplate_c01_g_y5.log
+            --infile pcamini_n04_g_y5.fits
+            --outfilename skytemplate_n04_c01_g_y5.fits
+            --ccdnum 1
+            --reject_rms 0.008
+            --good_filename good_skytemplate_c01_g_y5.fits
+            -v
+            --input_list ExpnumPath_c01_g_y5.txt OR
+            --input_template pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_rNNNNpNN_pixcor.fits
+        ```
