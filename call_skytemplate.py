@@ -18,8 +18,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO,
 )
-# Global variable for files to delete
-TMP_REMOVE = []
 
 def db_ea(q, dbsection='desoper', drop_dupl=None):
     ''' Method co call easyaccess, lowercase column names and 
@@ -76,7 +74,6 @@ def ccd_call(ccd_info):
     fnm_ilist = 'inlist_{0}_'.format(band) + str(uuid.uuid4()) + '.txt'
     tab[['expnum', 'path']].to_csv(fnm_ilist, sep=' ', 
                                    index=False, header=False)
-    TMP_REMOVE.append(fnm_ilist)
     # 2) config and log
     fnm_config = 'config/' + label + '_c{0:02}_{1}.config'.format(ccdnum, band)
     fnm_log = 'log/' + label + '_c{0:02}_{1}.log'.format(ccdnum, band)
@@ -110,7 +107,7 @@ def ccd_call(ccd_info):
     pA = sproc.call(cmd)
     # aux_file.close()
     logging.info('Ended {0}, {1}-band, ccd={2}'.format(label, band, ccdnum))
-    return True
+    return fnm_ilist
 
 def aux_main(reqnum=None, 
              attnum=None, 
@@ -143,25 +140,31 @@ def aux_main(reqnum=None,
                          rms))
     if test:
         runx = runx[-20:]
-    if (chunksize is not None):
-        tmp = P1.map(ccd_call, runx, chunksize)
-    else:
-        tmp = P1.map(ccd_call, runx)
     try:
-        P1.close()
-        P1.join()
+        if (chunksize is not None):
+            tmp = P1.map(ccd_call, runx, chunksize)
+        else:
+            tmp = P1.map(ccd_call, runx)
+        try:
+            P1.close()
+            P1.join()
+        except:
+            logging.error('Pool cannot be closed')
     except:
-        logging.error('Cannot close and join the Pool')
-    
+        logging.error('Call of pool.map failed')
+    finally:
+        # Remove temporary files
+        logging.info('Deleting temporary files')
+        for t in tmp:
+            try:
+                os.remove(t)
+            except:
+                logging.warning('Failed to delete {0}'.format(t))
     # Pool.map blocks until finished
     #res_band = P1.map(query_pixcor, runx)
     # For the 
     # reqnum, attnum, ccdnum, band, rootx, label, fnm_pca, rms
     #
-    # Remove temporary files
-    logging.info('Deleting temporary files')
-    for t in TMP_REMOVE:
-        os.remove(t)
     logging.info('Ended!')
 
     
