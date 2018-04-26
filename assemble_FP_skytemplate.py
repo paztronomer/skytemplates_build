@@ -114,7 +114,7 @@ def assemble_fp(in_args,):
     outfnm_fp = '{0}_PCA{1}_fp.fits'.format(lab, pca_comp)
     if os.path.exists(outfnm_fp):
         t_err = 'File {0} already exists. Not overwritting'.format(outfnm_fp)
-        logging.error(t_err)
+        logging.warning(t_err)
     else:
         fits = fitsio.FITS(outfnm_fp, 'rw')
         fits.write(fp) 
@@ -123,30 +123,61 @@ def assemble_fp(in_args,):
     return True
 
 def remove_border(arr, rm_value=np.nan):
-    ''' Simple function to remove the outer box, containing only values 
-    defined by rm_value. Work only in 2 dimensions. Can deal with no detected
-    border
+    ''' Function to remove the outer box, containing only values 
+    defined by rm_value. Work only in 2 dimensions.
     Inputs 
     - arr: array to be cropped
     - rm_value: value to define the border
     Returns
     - cropped array
     '''
-    # Criteria
+    if (arr.size < 9):
+        logging.warning('Array has less than 9 pixels')
+    # Get booleans 1D for the columns/rows that have exclusively NaN
     if np.isnan(rm_value):
-        msk = np.isnan(arr)
-    elif (rm_value is None):
-        msk = arr is None
+        bord_d1 = np.all(np.isnan(arr), axis = 0)
+        bord_d0 = np.all(np.isnan(arr), axis = 1)
     else:
-        msk = arr != rm_value
-    # Coordinates for the matching values
-    coo = np.argwhere(msk)
-    if coo.size == 0:
-        return arr
-    # Getting the border
-    y0, x0 = coo.min(axis=0)
-    y1, x1 = coo.max(axis=0) + 1   
-    return arr[y0:y1, x0:x1]
+        t_e = 'Not yet implemented. Exiting'
+        logging.error(t_e)
+        exit()
+    # Identify the borders, asking to not have other values outside them
+    logging.info('{0} {1}'.format(bord_d0.shape, bord_d1.shape))
+    idx_min_d0 = 0
+    idx_max_d0 = arr.shape[0]
+    i = 1
+    while True:
+        if ((bord_d0[0]) and (bord_d0[i]) and (bord_d0[i - 1])):
+            idx_min_d0 = i
+        else:
+            break
+        i += 1
+    j = bord_d0.size - 2
+    while True:
+        if ((bord_d0[-1]) and (bord_d0[j]) and (bord_d0[j + 1])):
+            idx_max_d0 = j
+        else: 
+            break
+        j -= 1
+    idx_min_d1 = 0
+    idx_max_d1 = arr.shape[1]
+    k = 1
+    while True:
+        if ((bord_d1[0]) and (bord_d1[k]) and (bord_d1[k + 1])):
+            idx_min_d1 = k
+        else:
+            break
+        k += 1
+    m = bord_d1.size - 2
+    while True:
+        if ((bord_d1[-1]) and (bord_d1[m]) and (bord_d1[m + 1])):
+            idx_max_d1 = m
+        else: 
+            break
+        m -= 1
+    # Using the above indices, crop the initial array
+    res = arr[idx_min_d0:idx_max_d0 + 1, idx_min_d1:idx_max_d1 + 1]
+    return res
 
 def rebin_mean(arr, new_shape):
     '''Rebin 2D array arr to shape new_shape by averaging
