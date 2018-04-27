@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.INFO,
 ) 
 
-def assemble_fp(in_args,):
+def assemble_fp(in_args):
     ''' Construct focal plane for a set of input CCDs, using its CCDNUM as
     identifier, and gettig positioning information from a table containing
     CCDNUM, DETSIZE, DETSEC, DATASEC
@@ -106,8 +106,19 @@ def assemble_fp(in_args,):
         aux0 = min(d0)
         aux1 = min(d1)
         fp[aux0:aux0 + xbin.shape[0], aux1:aux1 + xbin.shape[1]] = xbin
-    # Remove border of non-CCD pixels in the fp.
+    # Remove border of non-CCD pixels in the fp
+    logging.info('Previous shape {0}'.format(fp.shape))
     fp = remove_border(fp, rm_value=np.nan)
+    logging.info('Actual shape {0}'.format(fp.shape))
+    #
+    # Output FITS file being corrupted
+    # --------------------------------
+    # To solve the problem of the corrupted FITS file, the array needs to be 
+    # written to disk, loaded, and then written to file
+    # Other solution id to save to a numpy file and work with it 
+    tmp = str(uuid.uuid4()) + '.npy'
+    np.save(tmp, fp)
+    out_npy = np.load(tmp)
     # Save output
     if (lab is None):
         lab = str(uuid.uuid4())
@@ -117,9 +128,14 @@ def assemble_fp(in_args,):
         logging.warning(t_err)
     else:
         fits = fitsio.FITS(outfnm_fp, 'rw')
-        fits.write(fp) 
+        fits.write(out_npy)
+        fits.write
         fits.close()
-        logging.info('{0} saved'.format(outfnm_fp))
+        logging.info('FITS file {0} saved'.format(outfnm_fp))
+    # Remove the temporal file
+    os.remove(tmp)
+    t_i = 'Temporal auxiliary file {0} removed'.format(tmp)
+    logging.info(t_i)
     return True
 
 def remove_border(arr, rm_value=np.nan):
@@ -142,42 +158,65 @@ def remove_border(arr, rm_value=np.nan):
         logging.error(t_e)
         exit()
     # Identify the borders, asking to not have other values outside them
-    logging.info('{0} {1}'.format(bord_d0.shape, bord_d1.shape))
     idx_min_d0 = 0
     idx_max_d0 = arr.shape[0]
-    i = 1
+    i = 0
     while True:
-        if ((bord_d0[0]) and (bord_d0[i]) and (bord_d0[i - 1])):
+        if ((i == 0) and (bord_d0[0])):
+            idx_min_d0 = i
+        elif ((bord_d0[0]) and (bord_d0[i]) and (bord_d0[i - 1])):
             idx_min_d0 = i
         else:
             break
         i += 1
-    j = bord_d0.size - 2
+    j = bord_d0.size - 1
     while True:
-        if ((bord_d0[-1]) and (bord_d0[j]) and (bord_d0[j + 1])):
+        if ((j == (bord_d0.size - 1)) and (bord_d0[-1])):
+            idx_max_d0 = j
+        elif ((bord_d0[-1]) and (bord_d0[j]) and (bord_d0[j + 1])):
             idx_max_d0 = j
         else: 
             break
         j -= 1
     idx_min_d1 = 0
     idx_max_d1 = arr.shape[1]
-    k = 1
+    k = 0
     while True:
-        if ((bord_d1[0]) and (bord_d1[k]) and (bord_d1[k + 1])):
+        if ((k == 0) and (bord_d1[0])):
+            idx_min_d1 = k
+        elif ((bord_d1[0]) and (bord_d1[k]) and (bord_d1[k + 1])):
             idx_min_d1 = k
         else:
             break
         k += 1
-    m = bord_d1.size - 2
+    m = bord_d1.size - 1
     while True:
-        if ((bord_d1[-1]) and (bord_d1[m]) and (bord_d1[m + 1])):
+        if ((m == (bord_d1.size - 1)) and (bord_d1[-1])):
+            idx_max_d1 = m
+        elif ((bord_d1[-1]) and (bord_d1[m]) and (bord_d1[m + 1])):
             idx_max_d1 = m
         else: 
             break
         m -= 1
+    #
+    # From the debugging
+    # ------------------
+    # The output FITS file was corrupted when slicing in first and second 
+    # dimensions of the assembled focal plane. Below is part of the debugging
+    #
+    # Copying the array before process does not solves the corrupted problem
+    # arr = np.copy(arr_in)
+    # NOTE: I need to use np.copy(). If not, array gets distortioned 
+    # res = np.copy(arr)
+    # This works: res = res[idx_min_d0:idx_max_d0 + 1 , : ] 
+    # This DOES NOT work: res = res[:, idx_min_d1:idx_max_d1 + 1]
+    # This does not work: res[4000:6000 , 500:1000]
+    # This works: res = res[4000:7000, :]
+    # return [idx_min_d0, idx_max_d0 + 1, idx_min_d1, idx_max_d1 + 1]
+    # To slice here doesn't work
+    #
     # Using the above indices, crop the initial array
-    res = arr[idx_min_d0:idx_max_d0 + 1, idx_min_d1:idx_max_d1 + 1]
-    return res
+    return arr[idx_min_d0:idx_max_d0 + 1 , idx_min_d1:idx_max_d1 + 1]
 
 def rebin_mean(arr, new_shape):
     '''Rebin 2D array arr to shape new_shape by averaging
@@ -239,7 +278,6 @@ def aux_main(path_fnm, info_fnm,
     # Setup parallel call
     t_i ='Setup parallel call in {0} processes.'.format(N_PCA)
     t_i += ' This machine has {0} processors'.format(mp.cpu_count())
-    logging.info(t_i)
     P1 = mp.Pool(processes=N_PCA)
     aux_call = []
     for n in range(N_PCA):
