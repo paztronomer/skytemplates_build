@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.INFO,
 ) 
 
-def assemble_fp(in_args,):
+def assemble_fp(in_args):
     ''' Construct focal plane for a set of input CCDs, using its CCDNUM as
     identifier, and gettig positioning information from a table containing
     CCDNUM, DETSIZE, DETSEC, DATASEC
@@ -106,47 +106,117 @@ def assemble_fp(in_args,):
         aux0 = min(d0)
         aux1 = min(d1)
         fp[aux0:aux0 + xbin.shape[0], aux1:aux1 + xbin.shape[1]] = xbin
-    # Remove border of non-CCD pixels in the fp.
+    # Remove border of non-CCD pixels in the fp
+    logging.info('Previous shape {0}'.format(fp.shape))
     fp = remove_border(fp, rm_value=np.nan)
+    logging.info('Actual shape {0}'.format(fp.shape))
+    #
+    # Output FITS file being corrupted
+    # --------------------------------
+    # To solve the problem of the corrupted FITS file, the array needs to be 
+    # written to disk, loaded, and then written to file
+    # Other solution id to save to a numpy file and work with it 
+    tmp = str(uuid.uuid4()) + '.npy'
+    np.save(tmp, fp)
+    out_npy = np.load(tmp)
     # Save output
     if (lab is None):
         lab = str(uuid.uuid4())
     outfnm_fp = '{0}_PCA{1}_fp.fits'.format(lab, pca_comp)
     if os.path.exists(outfnm_fp):
         t_err = 'File {0} already exists. Not overwritting'.format(outfnm_fp)
-        logging.error(t_err)
+        logging.warning(t_err)
     else:
         fits = fitsio.FITS(outfnm_fp, 'rw')
-        fits.write(fp) 
+        fits.write(out_npy)
+        fits.write
         fits.close()
-        logging.info('{0} saved'.format(outfnm_fp))
+        logging.info('FITS file {0} saved'.format(outfnm_fp))
+    # Remove the temporal file
+    os.remove(tmp)
+    t_i = 'Temporal auxiliary file {0} removed'.format(tmp)
+    logging.info(t_i)
     return True
 
 def remove_border(arr, rm_value=np.nan):
-    ''' Simple function to remove the outer box, containing only values 
-    defined by rm_value. Work only in 2 dimensions. Can deal with no detected
-    border
+    ''' Function to remove the outer box, containing only values 
+    defined by rm_value. Work only in 2 dimensions.
     Inputs 
     - arr: array to be cropped
     - rm_value: value to define the border
     Returns
     - cropped array
     '''
-    # Criteria
+    if (arr.size < 9):
+        logging.warning('Array has less than 9 pixels')
+    # Get booleans 1D for the columns/rows that have exclusively NaN
     if np.isnan(rm_value):
-        msk = np.isnan(arr)
-    elif (rm_value is None):
-        msk = arr is None
+        bord_d1 = np.all(np.isnan(arr), axis = 0)
+        bord_d0 = np.all(np.isnan(arr), axis = 1)
     else:
-        msk = arr != rm_value
-    # Coordinates for the matching values
-    coo = np.argwhere(msk)
-    if coo.size == 0:
-        return arr
-    # Getting the border
-    y0, x0 = coo.min(axis=0)
-    y1, x1 = coo.max(axis=0) + 1   
-    return arr[y0:y1, x0:x1]
+        t_e = 'Not yet implemented. Exiting'
+        logging.error(t_e)
+        exit()
+    # Identify the borders, asking to not have other values outside them
+    idx_min_d0 = 0
+    idx_max_d0 = arr.shape[0]
+    i = 0
+    while True:
+        if ((i == 0) and (bord_d0[0])):
+            idx_min_d0 = i
+        elif ((bord_d0[0]) and (bord_d0[i]) and (bord_d0[i - 1])):
+            idx_min_d0 = i
+        else:
+            break
+        i += 1
+    j = bord_d0.size - 1
+    while True:
+        if ((j == (bord_d0.size - 1)) and (bord_d0[-1])):
+            idx_max_d0 = j
+        elif ((bord_d0[-1]) and (bord_d0[j]) and (bord_d0[j + 1])):
+            idx_max_d0 = j
+        else: 
+            break
+        j -= 1
+    idx_min_d1 = 0
+    idx_max_d1 = arr.shape[1]
+    k = 0
+    while True:
+        if ((k == 0) and (bord_d1[0])):
+            idx_min_d1 = k
+        elif ((bord_d1[0]) and (bord_d1[k]) and (bord_d1[k + 1])):
+            idx_min_d1 = k
+        else:
+            break
+        k += 1
+    m = bord_d1.size - 1
+    while True:
+        if ((m == (bord_d1.size - 1)) and (bord_d1[-1])):
+            idx_max_d1 = m
+        elif ((bord_d1[-1]) and (bord_d1[m]) and (bord_d1[m + 1])):
+            idx_max_d1 = m
+        else: 
+            break
+        m -= 1
+    #
+    # From the debugging
+    # ------------------
+    # The output FITS file was corrupted when slicing in first and second 
+    # dimensions of the assembled focal plane. Below is part of the debugging
+    #
+    # Copying the array before process does not solves the corrupted problem
+    # arr = np.copy(arr_in)
+    # NOTE: I need to use np.copy(). If not, array gets distortioned 
+    # res = np.copy(arr)
+    # This works: res = res[idx_min_d0:idx_max_d0 + 1 , : ] 
+    # This DOES NOT work: res = res[:, idx_min_d1:idx_max_d1 + 1]
+    # This does not work: res[4000:6000 , 500:1000]
+    # This works: res = res[4000:7000, :]
+    # return [idx_min_d0, idx_max_d0 + 1, idx_min_d1, idx_max_d1 + 1]
+    # To slice here doesn't work
+    #
+    # Using the above indices, crop the initial array
+    return arr[idx_min_d0:idx_max_d0 + 1 , idx_min_d1:idx_max_d1 + 1]
 
 def rebin_mean(arr, new_shape):
     '''Rebin 2D array arr to shape new_shape by averaging
@@ -208,7 +278,6 @@ def aux_main(path_fnm, info_fnm,
     # Setup parallel call
     t_i ='Setup parallel call in {0} processes.'.format(N_PCA)
     t_i += ' This machine has {0} processors'.format(mp.cpu_count())
-    logging.info(t_i)
     P1 = mp.Pool(processes=N_PCA)
     aux_call = []
     for n in range(N_PCA):
