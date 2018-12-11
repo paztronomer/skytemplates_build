@@ -64,7 +64,7 @@ be calculated beforehand (SExtractor). I don't have the *campaign* to do this
     awk -F "," '{print $1}' {some csv file}
     cat {some csv file} | cut -d, -f1
     ```
-1. A typical call would be
+1. A typical call would be. Note if you use `expnum` instead of `list` it triggers an error
     ```
     submit_widefield.py
     --db_section db-desoper
