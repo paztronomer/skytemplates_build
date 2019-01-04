@@ -378,11 +378,11 @@ if __name__ == '__main__':
     h4 += ' be used. Default (Y5): {0}'.format(att)
     abc.add_argument('--att', '-a', help=h4, metavar='', type=int, default=att)
     # Sky PCA per band
-    pca = ['pca_Y2Nstack_y6e1_n04_g_y5.fits',
-           'pca_Y2Nstack_y6e1_n04_r_y5.fits',
-           'pca_Y2Nstack_y6e1_n04_i_y5.fits',
-           'pca_Y2Nstack_y6e1_n04_z_y5.fits',
-           'pca_Y2Nstack_y6e1_n04_Y_y5.fits'
+    pca = ['pca_Y2Nstack_y6e1_g_n04.fits',
+           'pca_Y2Nstack_y6e1_r_n04.fits',
+           'pca_Y2Nstack_y6e1_i_n04.fits',
+           'pca_Y2Nstack_y6e1_z_n04.fits',
+           'pca_Y2Nstack_y6e1_Y_n04.fits'
           ]
     h5 = 'List of (local) sky PCA files (outputs from sky_pca), for the input'
     h5 += ' bands. Enter on SAME order as the bands. Space-separated list.'
