@@ -1,0 +1,17 @@
+source /work/apps/RHEL6/dist/eups/desdm_eups_setup.sh
+
+setup -r /work/devel/fpazch/git/pipebox/
+setup -r /work/devel/fpazch/svn/desdmreportingframework/trunk/
+export DES_DB_SECTION=db-desoper
+export X509_USER_PROXY=/home/fpazch/.globus/osg/user.proxy
+
+setup -v Y2Nstack 1.0.6+14
+
+export HISTTIMEFORMAT="%d/%m/%y %T "
+setup -v easyaccess 1.4.2+0
+setup -v pandas 0.15.2+2
+#setup -v ds9
+#setup -v matplotlib 1.3.1+8
+#setup -v astropy 1.1.2+3
+#setup -v FileMgmt 2.0.13+0
+#setup -v fitstools
