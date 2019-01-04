@@ -323,7 +323,7 @@ def aux_main(reqnum=None,
                              rms, local_run, dest_dir, bash_dir))
         if test:
             runx = runx[-20:]
-        try:
+        if True: #try:
             if (chunksize is not None):
                 tmp = P1.map(ccd_call, runx, chunksize)
             else:
@@ -333,9 +333,10 @@ def aux_main(reqnum=None,
                 P1.join()
             except:
                 logging.error('Pool cannot be closed')
-        except:
+        elif False: #except:
+            logging.error(sys.exc_info()[0]))
             logging.error('Call of Pool.map failed')
-        finally:
+        else: #finally:
             logging.info('Remember to free up space deleting tmp files')
             # Remove temporary files
             # logging.info('Deleting temporary files')
