@@ -334,7 +334,7 @@ def aux_main(reqnum=None,
             except:
                 logging.error('Pool cannot be closed')
         elif False: #except:
-            logging.error(sys.exc_info()[0]))
+            logging.error(sys.exc_info()[0])
             logging.error('Call of Pool.map failed')
         else: #finally:
             logging.info('Remember to free up space deleting tmp files')
