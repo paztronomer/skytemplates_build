@@ -227,6 +227,7 @@ def ccd_call(kwinfo):
     cmd += ' --input_list {0}'.format(fnm_ilist)
     cmd += ' --reject_rms {0}'.format(rms[band])
     cmd += ' --good_filename {0}'.format(fnm_good)
+    cmd += ' -v'
     # 7) Save the command into a txt file
     sh_name = '{0}_r{1}p{2:02}.sh'.format(band, reqnum, attnum, ccdnum)
     sh_name = os.path.join(sh_dir, sh_name)
