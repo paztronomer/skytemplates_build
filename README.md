@@ -85,7 +85,7 @@ can be achieved
 1. First, create the list of binned focal plane images to be input to `sky_pca`
 from which the 4 components will be calculated
     ```SQL
-    select distinct(fai.path, fai.filename)
+    select fai.path, fai.filename
     from file_archive_info fai, pfw_attempt att, desfile d, exposure e
     where att.reqnum={REQNUM}
       and att.attnum=1
@@ -94,6 +94,7 @@ from which the 4 components will be calculated
       and d.filetype='bleedmask_binned_fp'
       and CONCAT('D00', e.expnum)=att.unitname
       and e.band={BAND}
+      group by fai.path, fai.filename
       order by fai.filename; > {bleedmask binned fp images}
     ```
 1. Modify the output CSV to be used as input list
