@@ -304,8 +304,8 @@ def ccd_call(kwinfo):
     # pA = sproc.Popen(cmd)#, stdout=aux_file)#, stdout=sproc.PIPE, shell=True)
     # pA.wait()
     pA = sproc.call(cmd)
-    pA.wait()
-    pA.close()
+    # pA.wait()
+    # pA.close()
     #
     # If called from DB, here must delete the files used for listing the
     # skytemplate ingredients
