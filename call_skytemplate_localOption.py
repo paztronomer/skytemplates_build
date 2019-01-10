@@ -189,13 +189,7 @@ def ccd_write_list(kw_ccd):
     else:
         logging.info('Path already exists {0}'.format(save_dir))
     # 3) Write out the list of files
-    files_immask = list(
-        map(os.path.join,
-            [tmp_dest] * len(tab['path']),
-            map(os.path.basename, tab['path'])
-        )
-    )
-    flist = pd.DataFrame({'01_expnum': tab['expnum'], '02_path': files_immask})
+    flist = pd.DataFrame({'01_expnum': tab['expnum'], '02_path': tab['path']})
     flist.to_csv(fnm_ilist, sep=' ',index=False, header=False)
     return True
 
@@ -363,26 +357,20 @@ def aux_main(reqnum=None,
                 ccd_copy((reqnum, attnum, c, b, rootx, dest_dir,
                           Nproc, chunksize))
     elif create_list:
-        logging.info('Creating th list of files to be used as inputs')
+        logging.info('Creating the list of files to be used as inputs')
         wlist = []
         for b in band_list:
             logging.info('Band: {0}'.format(b))
             for c in ccd_list:
-                logging.info('CCD: {0}'.format(c))
                 wlist.append((reqnum, attnum, c, b, rootx, dest_dir))
         # Setup the mp
         logging.info('Launching {0} query-processes in parallel'.format(Nproc))
         P1 = mp.Pool(processes=Nproc)
-        try:
-            if (chunksize is not None):
-                tmp = P1.map(ccd_write_list, runx, chunksize)
-            else:
-                tmp = P1.map(ccd_write_list, runx)
-            P1.close()
-            P1.join()
-        except:
-            logging.error(sys.exc_info()[0])
-            logging.error('Pool cannot be closed')
+        if (chunksize is not None):
+            tmp = P1.map(ccd_write_list, wlist, chunksize)
+        else:
+            tmp = P1.map(ccd_write_list, wlist)
+        P1.close()
     else:
         # Parallel call either for local run or for running from desarchive
         # The option 'local_run' will give the ability of run from local files
@@ -400,21 +388,15 @@ def aux_main(reqnum=None,
                              rms, local_run, dest_dir, bash_dir))
         if test:
             runx = runx[-20:]
-        if True: #try:
-            try:
-                if (chunksize is not None):
-                    tmp = P1.map(ccd_call, runx, chunksize)
-                else:
-                    tmp = P1.map(ccd_call, runx)
-                P1.close()
-                P1.join()
-            except:
-                logging.error(sys.exc_info()[0])
-                logging.error('Pool cannot be closed')
-        elif False: #except:
+        try:
+            if (chunksize is not None):
+                tmp = P1.map(ccd_call, runx, chunksize)
+            else:
+                tmp = P1.map(ccd_call, runx)
+            P1.close()
+        except:
             logging.error(sys.exc_info()[0])
-            logging.error('Call of Pool.map failed')
-        else: #finally:
+        finally:
             logging.info('Remember to free up space deleting tmp files')
             # Remove temporary files
             # logging.info('Deleting temporary files')
