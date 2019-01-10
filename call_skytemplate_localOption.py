@@ -226,7 +226,7 @@ def ccd_call(kwinfo):
     # Get the arguments
     reqnum, attnum, ccdnum, band = kwinfo[:4]
     rootx, label, band_pca, rms, runLocal, dirx, sh_dir = kwinfo[4:]
-
+    
     # 1) List of files from which to run skytemplate generation
     if runLocal:
         fnm_ilist = 'inlist_{0}_r{1}p{2:02}_c{3:02}.txt'.format(band, reqnum,
@@ -304,6 +304,7 @@ def ccd_call(kwinfo):
     # pA = sproc.Popen(cmd)#, stdout=aux_file)#, stdout=sproc.PIPE, shell=True)
     # pA.wait()
     pA = sproc.call(cmd)
+    pA.wait()
     pA.close()
     #
     # If called from DB, here must delete the files used for listing the
@@ -316,7 +317,7 @@ def ccd_call(kwinfo):
             logging.warning('Failed to delete {0}'.format(fnm_ilist))
 
     logging.info('Ended {0}, {1}-band, ccd={2}'.format(label, band, ccdnum))
-    return True
+    return 1
 
 def aux_main(reqnum=None,
              attnum=None,
@@ -377,8 +378,6 @@ def aux_main(reqnum=None,
         # and lists, specified by band-reqnum-attnum-ccdnum
         # The ccd_call function has an argument for running from local files
         # or from desarchive
-        logging.info('Launching {0} query-processes in parallel'.format(Nproc))
-        P1 = mp.Pool(processes=Nproc)
         runx = []
         for b in band_list:
             logging.info('Band: {0}'.format(b))
@@ -388,6 +387,16 @@ def aux_main(reqnum=None,
                              rms, local_run, dest_dir, bash_dir))
         if test:
             runx = runx[-20:]
+        #
+        logging.info('Launching {0} query-processes in parallel'.format(Nproc))
+        P1 = mp.Pool(processes=Nproc)
+        if (chunksize is not None):
+            tmp = P1.map(ccd_call, runx, chunksize)
+        else:
+            tmp = P1.map(ccd_call, runx)
+        P1.close()
+
+        """
         try:
             if (chunksize is not None):
                 tmp = P1.map(ccd_call, runx, chunksize)
@@ -405,6 +414,8 @@ def aux_main(reqnum=None,
             #         os.remove(t)
             #     except:
             #         logging.warning('Failed to delete {0}'.format(t))
+        """
+    logging.info('Remember to free up space deleting tmp files')
     logging.info('Ended!')
 
 
@@ -477,7 +488,7 @@ if __name__ == '__main__':
     abc.add_argument('--copy', help=h10a, action='store_true')
     # Local run
     h10b = 'Flag to run from local lists instead of queries.'
-    h10b += ' It uses a defined directory tree'
+    h10b += ' if local files are used, it points to a defined directory tree'
     h10b += ' based on reqnum, attnum, band, and ccdnum:'
     h10b += ' \'immasked/{BAND}_r{REQNUM}p{ATTNUM}_c{CCDNUM}/\''
     abc.add_argument('--local', help=h10b, action='store_true')
