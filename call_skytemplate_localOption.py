@@ -15,13 +15,16 @@ import itertools
 import numpy as np
 import pandas as pd
 import multiprocessing as mp
-import easyaccess as ea
-
 # Setup logging
 logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     level=logging.INFO,
 )
+try:
+    import easyaccess as ea
+except:
+    logging.warning('easyacess not foud')
+
 
 def copy2_local(kw):
     ''' Method to copy files preserving metadata
@@ -147,6 +150,53 @@ def ccd_copy(kw_ccd):
     logging.info('Start copying CCD={0} files'.format(ccdnum))
     copy_local(list(tab['path'].values), tmp_dest, nproc=nproc, chunk=chsize)
     logging.info('CCD={0} copy finished'.format(ccdnum))
+    return True
+
+def ccd_write_list(kw_ccd):
+    ''' Create lists of inputs files to be used, by CCD/band. These list are
+    saved to the same directory tree structure as the copy of images to local
+    '''
+    # Uncompress
+    reqnum, attnum, ccdnum, band, rootx, save_dir = kw_ccd
+    # Fill the query text
+    query = query_pixcor(reqnum, attnum, ccdnum, band)
+    # DB query, droping duplicates in filename
+    tab = db_ea(query, dbsection='desoper', drop_dupl=['filename'])
+    if (len(tab.index) == 0):
+        i = [reqnum, attnum, ccdnum, band]
+        logging.error('DB query returned no elements ({0})'.format(i))
+    # Construct the full path
+    def f1(a, b, c):
+        if ((c == None) or (c == -9999)):
+            return os.path.join(rootx, a, b)
+        else:
+            return os.path.join(rootx, a, b + c)
+    tab['path'] = map(f1, tab['path'], tab['filename'], tab['compression'])
+    # Steps to save files and keep a list of the files to be used
+    # 1) Filename of the list with the paths to be used when locally call
+    # skytemplate
+    fnm_ilist = 'inlist_{0}_r{1}p{2:02}_c{3:02}.txt'.format(band, reqnum,
+                                                            attnum, ccdnum)
+    fnm_ilist = os.path.join(save_dir, fnm_ilist)
+    # 2) Check directories existence
+    if not os.path.exists(save_dir):
+        try:
+            os.mkdir(save_dir)
+        except:
+            logging.error('Exception: {0}'.format(sys.exc_info()[0]))
+            logging.info('{0} could not be created'.format(save_dir))
+            exit(1)
+    else:
+        logging.info('Path already exists {0}'.format(save_dir))
+    # 3) Write out the list of files
+    files_immask = list(
+        map(os.path.join,
+            [tmp_dest] * len(tab['path']),
+            map(os.path.basename, tab['path'])
+        )
+    )
+    flist = pd.DataFrame({'01_expnum': tab['expnum'], '02_path': files_immask})
+    flist.to_csv(fnm_ilist, sep=' ',index=False, header=False)
     return True
 
 def ccd_call(kwinfo):
@@ -287,6 +337,7 @@ def aux_main(reqnum=None,
              test=False,
              local_copy=False,
              local_run=False,
+             create_list=False,
              dest_dir='immasked/',
              bash_dir='bash_skytmp/',):
     ''' Main caller
@@ -294,15 +345,16 @@ def aux_main(reqnum=None,
     # Parallelislm
     if (Nproc is None):
         Nproc = mp.cpu_count()
-    logging.info('Launching {0} processes in parallel'.format(Nproc))
     # Label for outputs
     if (label is None):
         label = str(uuid.uuid4())
     # Sky template call is by CCD
     #
-    # Different calls: copy files / run from desarchive / run from local
+    # Different calls: copy files / create lists / run from desarchive
+    # / run from local
     #
     if local_copy:
+        logging.info('Launching {0} copy-processes in parallel'.format(Nproc))
         # Parallel setup for copy is on transfer level, not at querying
         for b in band_list:
             logging.info('Band: {0}'.format(b))
@@ -310,10 +362,34 @@ def aux_main(reqnum=None,
                 logging.info('CCD: {0}'.format(c))
                 ccd_copy((reqnum, attnum, c, b, rootx, dest_dir,
                           Nproc, chunksize))
+    elif create_list:
+        logging.info('Creating th list of files to be used as inputs')
+        wlist = []
+        for b in band_list:
+            logging.info('Band: {0}'.format(b))
+            for c in ccd_list:
+                logging.info('CCD: {0}'.format(c))
+                wlist.append((reqnum, attnum, c, b, rootx, dest_dir))
+        # Setup the mp
+        logging.info('Launching {0} query-processes in parallel'.format(Nproc))
+        P1 = mp.Pool(processes=Nproc)
+        try:
+            if (chunksize is not None):
+                tmp = P1.map(ccd_write_list, runx, chunksize)
+            else:
+                tmp = P1.map(ccd_write_list, runx)
+            P1.close()
+            P1.join()
+        except:
+            logging.error(sys.exc_info()[0])
+            logging.error('Pool cannot be closed')
     else:
         # Parallel call either for local run or for running from desarchive
         # The option 'local_run' will give the ability of run from local files
         # and lists, specified by band-reqnum-attnum-ccdnum
+        # The ccd_call function has an argument for running from local files
+        # or from desarchive
+        logging.info('Launching {0} query-processes in parallel'.format(Nproc))
         P1 = mp.Pool(processes=Nproc)
         runx = []
         for b in band_list:
@@ -325,14 +401,15 @@ def aux_main(reqnum=None,
         if test:
             runx = runx[-20:]
         if True: #try:
-            if (chunksize is not None):
-                tmp = P1.map(ccd_call, runx, chunksize)
-            else:
-                tmp = P1.map(ccd_call, runx)
             try:
+                if (chunksize is not None):
+                    tmp = P1.map(ccd_call, runx, chunksize)
+                else:
+                    tmp = P1.map(ccd_call, runx)
                 P1.close()
                 P1.join()
             except:
+                logging.error(sys.exc_info()[0])
                 logging.error('Pool cannot be closed')
         elif False: #except:
             logging.error(sys.exc_info()[0])
@@ -417,10 +494,17 @@ if __name__ == '__main__':
     h10a = 'Flag to copy pixcorrect CCD files to local direcory \'immasked/\''
     abc.add_argument('--copy', help=h10a, action='store_true')
     # Local run
-    h10b = 'Flag to run from local files. It uses a defined directory tree'
+    h10b = 'Flag to run from local lists instead of queries.'
+    h10b += ' It uses a defined directory tree'
     h10b += ' based on reqnum, attnum, band, and ccdnum:'
     h10b += ' \'immasked/{BAND}_r{REQNUM}p{ATTNUM}_c{CCDNUM}/\''
     abc.add_argument('--local', help=h10b, action='store_true')
+    # Local lists creation
+    h10c = 'Flag to write local lists of the files to run from. The paths'
+    h10c += ' inside these lists points to  the desarchive. It saves the lists'
+    h10c += ' using the same directory treee as the created by the copy to'
+    h10c += ' local option'
+    abc.add_argument('--wlist', help=h10c, action='store_true')
     #
     # Test
     h11 = 'Flag. Whether to launch a test with only 20 images'
@@ -451,6 +535,7 @@ if __name__ == '__main__':
         'test': abc.test,
         'local_copy': abc.copy,
         'local_run': abc.local,
+        'create_list': abc.wlist,
     }
     aux_main(**kw)
 
