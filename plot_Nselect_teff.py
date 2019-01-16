@@ -1,4 +1,4 @@
-""" Quick plot to show the number of selected exposures, per band, as a 
+""" Quick plot to show the number of selected exposures, per band, as a
 function of T_EFF
 """
 
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 # For datetime ticks
 import datetime
 from matplotlib.dates import MonthLocator, DayLocator, DateFormatter
-# For minor ticks 
+# For minor ticks
 from matplotlib.ticker import MultipleLocator, FormatStrFormatter
 # DES colors
 from descolors import BAND_COLORS
@@ -26,7 +26,7 @@ def dbquery(toquery, dbsection='desoper'):
     return restab
 
 def aux_query():
-    ''' Iteratively get numbers for the number of exposures in each range 
+    ''' Iteratively get numbers for the number of exposures in each range
     '''
     #
     def qtext(n1, n2, teff_min, teff_max=2):
@@ -50,7 +50,10 @@ def aux_query():
         q += " group by e.band, e.nite order by e.band, e.nite"
         return q
     #
-    n1, n2 = 20180912, 20181112
+    n1, n2 = 20180908, 20190109
+    # 20180908, 20181117
+    # 20180908, 20190109
+    # 20180912, 20181112
     for idx, tx in enumerate(np.arange(0.1, 1., 0.1)):
         if (idx == 0):
             tmp = dbquery(qtext(n1, n2, tx))
@@ -69,10 +72,10 @@ def plot01(df):
     # By grouping, we created an multiindex dataframe, which is handy if used
     # through its hierarchical structure
     dfx = df.groupby(['teff_min', 'band']).agg('sum')
-    # To get the values from the different levels of indexing, use 
-    # index.get_level_values() 
+    # To get the values from the different levels of indexing, use
+    # index.get_level_values()
     #
-    # Now, we're only interested in the 'nexposure' column. If we make this 
+    # Now, we're only interested in the 'nexposure' column. If we make this
     # subselection, it will still have the 2 levels of indexig
     dfx = dfx['nexposure']
     index01 = dfx.index.get_level_values('teff_min')
@@ -92,7 +95,7 @@ def plot01(df):
             color=BAND_COLORS[b],
             label=b,
         )
-    plt.legend(loc='best', fontsize='small', fancybox=True, shadow=True, 
+    plt.legend(loc='best', fontsize='small', fancybox=True, shadow=True,
                edgecolor='silver')
     ax.set_xlabel('T_EFF cut value')
     ax.set_ylabel('Total N exposures')
@@ -104,7 +107,7 @@ def plot01(df):
     # Set horizontal line
     ax.axhline(600, linewidth=1, linestyle='--', color='blue')
     # Title
-    ax.set_title('Selected exposures vs varying T_EFF', color='dodgerblue')
+    ax.set_title('Selected exposures vs varying T_EFF, {0}-{1}'.format(df['nite'].min(), df['nite'].max()), color='dodgerblue')
     # Spacing adjustment
     plt.subplots_adjust(top=0.95)
     if True:
@@ -113,10 +116,10 @@ def plot01(df):
     plt.show()
 
 def plot02(df):
-    ''' For a subset of cut values, plot the total selected exposures per 
+    ''' For a subset of cut values, plot the total selected exposures per
     night
     '''
-    # Grouping 
+    # Grouping
     dfy = df.groupby(['teff_min', 'band', 'nite']).agg('sum')
     # Just for clarity, explicit the indices
     index01 = dfy.index.get_level_values('teff_min')
@@ -124,6 +127,7 @@ def plot02(df):
     index03 = dfy.index.get_level_values('nite')
     # Range of teff values to plot
     sel_teff = [0.4, 0.5, 0.6]
+    # [0.4, 0.5, 0.6]
     # Plotting
     fig, ax = plt.subplots(3, figsize=(7, 8), sharex=True)
     # Setup time locators
@@ -137,9 +141,9 @@ def plot02(df):
         axis.xaxis.set_major_locator(days10)
         axis.xaxis.set_minor_locator(days)
         axis.autoscale_view()
-        axis.xaxis.set_tick_params(which='major', 
+        axis.xaxis.set_tick_params(which='major',
                                    rotation=30,
-                                   width=1.5, 
+                                   width=1.5,
                                    length=10,
                                   )
         #
@@ -152,7 +156,7 @@ def plot02(df):
             tmp2 = tmp1.iloc[tmp1_index02 == b]
             # Transform time to datetime
             aux_time = to_datetime(tmp2.index.get_level_values('nite').values)
-            # 
+            #
             axis.plot(
                 np.array(aux_time),
                 tmp2.values.flatten(),
@@ -170,18 +174,18 @@ def plot02(df):
         # Y-axis labels
         axis.set_ylabel('N exposures')
         # Text
-        axis.text(0.25, 0.9, 
+        axis.text(0.25, 0.9,
                   'T_EFF > {0}'.format(sel_teff[i]),
                   color='navy',
                   transform=axis.transAxes)
     # X-axis
     ax[-1].set_xlabel('Night')
     # Title
-    plt.suptitle('Number of exposures per band, per night, obeying T_EFF cut',
+    plt.suptitle('Number of exposures per band, per night, obeying T_EFF cut, {0}-{1}'.format(df['nite'].min(), df['nite'].max()),
                  color='dodgerblue')
     # Spacing
-    plt.subplots_adjust(left=0.1, bottom=0.13, 
-                        right=0.97, top=0.95, 
+    plt.subplots_adjust(left=0.1, bottom=0.13,
+                        right=0.97, top=0.95,
                         hspace=0.05)
     if True:
         outnm = 'Nselect_perNight.pdf'
@@ -199,7 +203,7 @@ def aux_main(tab_in=None, ask_db=False):
     '''
     if ask_db:
         df = aux_query()
-        df.to_csv('Nselected_teff_PID{0}.csv'.format(os.getpid()), 
+        df.to_csv('Nselected_teff_PID{0}.csv'.format(os.getpid()),
                   index=False, header=True)
     else:
         df = pd.read_csv(tab_in)
@@ -213,5 +217,6 @@ def aux_main(tab_in=None, ask_db=False):
 
 
 if __name__ == '__main__':
-    aux_main(tab_in='Nselected_teff_PID17748.csv')
-    
+
+    aux_main(ask_db=True)
+    # (tab_in='Nselected_teff_PID17748.csv')
