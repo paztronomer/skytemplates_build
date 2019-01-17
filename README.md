@@ -88,7 +88,7 @@ from which the 4 components will be calculated
     select fai.path, fai.filename
     from file_archive_info fai, pfw_attempt att, desfile d, exposure e
     where att.reqnum={REQNUM}
-      and att.attnum=1
+      and att.attnum={ATTNUM}
       and fai.filename=d.filename -- also fai.desfile_id=d.id
       and d.pfw_attempt_id=att.id
       and d.filetype='bleedmask_binned_fp'
@@ -101,6 +101,28 @@ from which the 4 components will be calculated
     ```bash
     awk -F "," '{print "/archive_data/desarchive/"$1"/"$2}' {CSV as above}
     ```
+
+1. Having the list of paths to the binned focal plane images we can do
+```bash
+#!/bin/bash
+# Create local bash files for transfer binned_fp files and also create the
+# input tables for sky_pca
+bands=(g r i z Y)
+for k in ${bands[@]}
+    do
+    echo $k band
+    # k is set as variable inside awk by -v k=$k
+    # we avoid the first line (header) by using FNR > 1
+    echo Creating bash copy script
+    awk -F "," -v k=$k 'FNR > 1 {print("cp /archive_data/desarchive/" $1 "/" $2 " binned_fp/" k )}'
+'bleedmask_'$k'.csv' > 'copy_'$k'.sh'
+
+    echo Creating paths for sky_pca
+    awk -F "," -v k=$k 'FNR > 1 {print("binned_fp/" k "/" $2)}' 'bleedmask_'$k'.csv' > 'local_bleedm
+ask_binned_'$k'.csv'
+    done
+```
+
 1. A typical call to `sky_pca` should be something like
     ```bash
     sky_pca -i {bleedmask binned fp paths}
@@ -123,10 +145,21 @@ using the following RMS values for rejection
 
 ### Create the skytemplate for un-binned CCDs
 
-### Run CCD by CCD, by hand
+#### Running locally
+
+1. If we want to force numpy to go 1-CPU wide only, not at my wrapper level, but
+at `sky_template` level,  then `source` the following
+```bash
+export OPENBLAS_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export OMP_NUM_THREADS=1
+export OPENBLAS_MAIN_FREE=1
+```
+
+#### Run CCD by CCD, by hand
 1. First, create a list per CCD for the reduced images to be used for the
 sky template. Note use of `miscfile` table doesn't work because don't have
-entries for *red_pixcor* filtype.  
+entries for *red_pixcor* filtype.
     ```SQL
     select e.expnum, fai.path, fai.filename, fai.compression
     from file_archive_info fai, pfw_attempt att, desfile d, exposure e
@@ -170,7 +203,7 @@ entries for *red_pixcor* filtype.
             --input_template pixcor_tmp/D{expnum:08d}_g_c{ccd:02d}_rNNNNpNN_pixcor.fits
         ```
 
-### Run using my wrapper, in parallel
+#### Run using my wrapper, in parallel
 1. The code **call_skytemplate.py** is a wrapper for `sky_template`. It runs
 over the set of band and CCDs, using the ingredients coming from a single
 pipeline run (reqnum, attnum, filetype *red_pixcor*). The process is launch
@@ -183,6 +216,14 @@ chunk size will decrease the speed but will be safer, avoiding memory issues.
     python call_skytemplate.py --label Y5_withY2N_ch250 --chunk 250
     ```
 For more information, display the help from *call_skytemplate.py*
+
+### Rename files to match the DES naming schema
+
+To rename and match the DES naming
+```bash
+awk '{print("cp " $1 " Y6A1_20180908t1117_" substr($1, length($1)-5, 1) "_" substr($1, length($1)-9,
+ 3) "_r4024p01_skypca-tmpl.fits")}' list.txt
+```
 
 ## Setup of older Y2N stack
 1. Due to the issue *sky_pca* outputs, using actual stacks have some strange
