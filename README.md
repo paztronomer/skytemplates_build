@@ -238,6 +238,10 @@ Use the following while the issue is not solved.
     export X509_USER_PROXY=/home/{MY USER}/.globus/osg/user.proxy
     setup -v Y2Nstack 1.0.6+14
     export HISTTIMEFORMAT="%d/%m/%y %T "
+    ```
+Be aware of only  load the stack and no additional packages as:
+    ``` bash
     setup -v easyaccess 1.4.2+0
     setup -v pandas 0.15.2+2
     ```
+it causes the solution to be bad in some cases (in other cases not, which is concerning)
