@@ -30,6 +30,7 @@ get about 600 exposures
         and fcut.program='survey'
         and fcut.analyst != 'SNQUALITY'
         and fcut.lastchanged_time=w.maxtime
+        and fcut.expnum=w.expnum
         and fcut.t_eff > 0.9
         order by fcut.t_eff; > explist_{year}_{epoch}_{band}.csv
    ```
