@@ -73,11 +73,30 @@ def db_ea(q, dbsection='desoper', drop_dupl=None):
         outtab.reset_index(drop=True, inplace=True)
     return outtab
 
-def query_pixcor(reqnum, attnum, ccdnum, band):
+def query_pixcor(reqnum, attnum, explist, ccdnum, band):
     ''' Predefined query to get pixcor by band, reqnum, attnum and ccdnum
+    Also, if explist is given, then subselect from the set of reqnum/attnum
+    Parameters
+    ----------
+    reqnum: int
+        Request number as from PFW_ATTEMPT
+    attnum: int
+        Attempt number
+    ccdnum: int
+        CCD number
+    band: str
+        Filter used for the observations
+    explist: 1D array of int
+        If given, will be the list of exposure number to make a sub-selection 
+        from the qiven reqnum
+    Returns
+    -------
+    q: str
+        String containing the query to be used, per CCD
     '''
     q = 'select e.expnum, fai.path, fai.filename, fai.compression'
-    q += ' from file_archive_info fai, pfw_attempt att, desfile d, exposure e'
+    q += ' from file_archive_info fai, pfw_attempt att, desfile d,'
+    q += ' exposure e'
     q += ' where att.reqnum={0}'.format(reqnum)
     q += ' and att.attnum={0}'.format(attnum)
     q += ' and fai.desfile_id=d.id'
@@ -86,16 +105,19 @@ def query_pixcor(reqnum, attnum, ccdnum, band):
     q += ' and CONCAT(\'D00\', e.expnum)=att.unitname'
     q += ' and fai.filename like \'%_c{0:02}_%\''.format(ccdnum)
     q += ' and e.band=\'{0}\''.format(band)
+    if (explist is not None):
+        e = ','.join(map(str, explist))
+        q += ' and e.expnum in ({0})'.format(e)
     q += ' order by att.unitname'
     return q
 
-def ccd_copy(kw_ccd):
+def ccd_copy(kw):
     ''' Copy files to a local directory, using a predefined tree-structure
     '''
     # Uncompress
-    reqnum, attnum, ccdnum, band, rootx, save_dir, nproc, chsize = kw_ccd
+    reqnum, attnum, explist, ccdnum, band, rootx, save_dir, nproc, chsize = kw
     # Fill the query text
-    query = query_pixcor(reqnum, attnum, ccdnum, band)
+    query = query_pixcor(reqnum, attnum, explist, ccdnum, band)
     # DB query, droping duplicates in filename
     tab = db_ea(query, dbsection='desoper', drop_dupl=['filename'])
     if (len(tab.index) == 0):
@@ -157,9 +179,9 @@ def ccd_write_list(kw_ccd):
     saved to the same directory tree structure as the copy of images to local
     '''
     # Uncompress
-    reqnum, attnum, ccdnum, band, rootx, save_dir = kw_ccd
+    reqnum, attnum, explist, ccdnum, band, rootx, save_dir = kw_ccd
     # Fill the query text
-    query = query_pixcor(reqnum, attnum, ccdnum, band)
+    query = query_pixcor(reqnum, attnum, explist, ccdnum, band)
     # DB query, droping duplicates in filename
     tab = db_ea(query, dbsection='desoper', drop_dupl=['filename'])
     if (len(tab.index) == 0):
@@ -196,13 +218,16 @@ def ccd_write_list(kw_ccd):
 def ccd_call(kwinfo):
     ''' Calling of sky_template creation, per CCD. It can run either from
     local files or from DB queries
-    Inputs
+    Parameters
+    ----------
     reqnum: int
         Reqnum as listed in DB
     attnum: int
         Attnum as listed in the DB
     ccdnum: int
         CCD number as listed in the DB
+    explist: array of int
+        Set of exposure numbers (as listed on DB) to make a sub-selection
     band: str
         Band as listed in the DB
     rootx: str
@@ -224,8 +249,8 @@ def ccd_call(kwinfo):
         by hand
     '''
     # Get the arguments
-    reqnum, attnum, ccdnum, band = kwinfo[:4]
-    rootx, label, band_pca, rms, runLocal, dirx, sh_dir = kwinfo[4:]
+    reqnum, attnum, explist, ccdnum, band = kwinfo[:5]
+    rootx, label, band_pca, rms, runLocal, dirx, sh_dir = kwinfo[5:]
     
     # 1) List of files from which to run skytemplate generation
     if runLocal:
@@ -234,7 +259,7 @@ def ccd_call(kwinfo):
         fnm_ilist = os.path.join(dirx, fnm_ilist)
     else:
         # Fill up the query text
-        query = query_pixcor(reqnum, attnum, ccdnum, band)
+        query = query_pixcor(reqnum, attnum, explist, ccdnum, band)
         # DB query
         tab = db_ea(query, dbsection='desoper', drop_dupl=['filename'])
         if (len(tab.index) == 0):
@@ -321,6 +346,7 @@ def ccd_call(kwinfo):
 
 def aux_main(reqnum=None,
              attnum=None,
+             explist_fnm=None,
              band_list=None,
              ccd_list=None,
              skypca_per_band=None,
@@ -343,6 +369,11 @@ def aux_main(reqnum=None,
     # Label for outputs
     if (label is None):
         label = str(uuid.uuid4())
+    # Load explist if given
+    if (explist_fnm is not None):
+        explist = np.loadtxt(explist_fnm, dtype='int')
+    else:
+        explist = None
     # Sky template call is by CCD
     #
     # Different calls: copy files / create lists / run from desarchive
@@ -355,7 +386,7 @@ def aux_main(reqnum=None,
             logging.info('Band: {0}'.format(b))
             for c in ccd_list:
                 logging.info('CCD: {0}'.format(c))
-                ccd_copy((reqnum, attnum, c, b, rootx, dest_dir,
+                ccd_copy((reqnum, attnum, explist, c, b, rootx, dest_dir,
                           Nproc, chunksize))
     elif create_list:
         logging.info('Creating the list of files to be used as inputs')
@@ -363,7 +394,7 @@ def aux_main(reqnum=None,
         for b in band_list:
             logging.info('Band: {0}'.format(b))
             for c in ccd_list:
-                wlist.append((reqnum, attnum, c, b, rootx, dest_dir))
+                wlist.append((reqnum, attnum, explist, c, b, rootx, dest_dir))
         # Setup the mp
         logging.info('Launching {0} query-processes in parallel'.format(Nproc))
         P1 = mp.Pool(processes=Nproc)
@@ -382,7 +413,7 @@ def aux_main(reqnum=None,
         for b in band_list:
             logging.info('Band: {0}'.format(b))
             for c in ccd_list:
-                runx.append((reqnum, attnum, c, b,
+                runx.append((reqnum, attnum, explist, c, b,
                              rootx, label, skypca_per_band,
                              rms, local_run, dest_dir, bash_dir))
         if test:
@@ -423,7 +454,9 @@ if __name__ == '__main__':
 
     hgral = 'Code to call sky_template for a given set of bands and CCDs,'
     hgral += ' using a UNIQUE set of ingredients (same REQNUM, ATTNUM for'
-    hgral += ' all the bands). Processes are run in parallel. If running from'
+    hgral += ' all the bands). If exposure list is provided, it will create a'
+    hgral += ' subset from the REQNUM/ATTNUM pair.'
+    hgral += ' Processes are run in parallel. If running from'
     hgral += ' local files, it uses a predefined directory tree schema'
     egral = 'Remember to check the produced skytemplates'
     abc = argparse.ArgumentParser(description=hgral, epilog=egral)
@@ -449,6 +482,9 @@ if __name__ == '__main__':
     h4 = 'Attnum associated to the reqnum for the products (red_pixcor) to'
     h4 += ' be used. Default (Y5): {0}'.format(att)
     abc.add_argument('--att', '-a', help=h4, metavar='', type=int, default=att)
+    h4b = 'Filename of the exposure number list (1-column, plain text) to'
+    h4b += ' make a sub-selection from the reqnum/attnum'
+    abc.add_argument('--exp', help=h4b, metavar='', type=str)
     # Sky PCA per band
     pca = ['pca_Y2N12_y6e1_g_n04.fits',
            'pca_Y2N12_y6e1_r_n04.fits',
@@ -518,6 +554,7 @@ if __name__ == '__main__':
     kw = {
         'reqnum': abc.req,
         'attnum': abc.att,
+        'explist_fnm': abc.exp,
         'band_list': abc.band,
         'ccd_list': abc.ccd,
         'skypca_per_band': pca_kw,
