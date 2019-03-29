@@ -94,11 +94,19 @@ def query_pixcor(reqnum, attnum, explist, ccdnum, band):
     q: str
         String containing the query to be used, per CCD
     '''
-    q = 'select e.expnum, fai.path, fai.filename, fai.compression'
+    logging.warning('Modified to get the higher ATTNUM')
+    q = 'with w as (select unitname, max(attnum) attnum'
+    q += ' from pfw_attempt'
+    q += ' where reqnum={0} group by unitname)'.format(reqnum)
+    #
+    q += ' select e.expnum, fai.path, fai.filename, fai.compression'
     q += ' from file_archive_info fai, pfw_attempt att, desfile d,'
-    q += ' exposure e'
+    q += ' exposure e, w'
     q += ' where att.reqnum={0}'.format(reqnum)
-    q += ' and att.attnum={0}'.format(attnum)
+    #
+    q += ' and att.unitname=w.unitname'
+    q += ' and att.attnum=w.attnum'
+    # q += ' and att.attnum={0}'.format(attnum)
     q += ' and fai.desfile_id=d.id'
     q += ' and d.pfw_attempt_id=att.id'
     q += ' and d.filetype=\'red_pixcor\''
@@ -476,7 +484,7 @@ if __name__ == '__main__':
     req = 3439
     h3 = 'Reqnum associated to the products (red_pixcor) to be used. Default'
     h3 += ' (Y5): {0}'.format(req)
-    abc.add_argument('--req', '-r', help=h3, metavar='', type=int,
+    abc.add_argument('--req', '-r', help=h3, metavar='', type=str,
                      default=req)
     att = 1
     h4 = 'Attnum associated to the reqnum for the products (red_pixcor) to'
