@@ -486,10 +486,10 @@ if __name__ == '__main__':
     h3 += ' (Y5): {0}'.format(req)
     abc.add_argument('--req', '-r', help=h3, metavar='', type=str,
                      default=req)
-    att = 1
-    h4 = 'Attnum associated to the reqnum for the products (red_pixcor) to'
-    h4 += ' be used. Default (Y5): {0}'.format(att)
-    abc.add_argument('--att', '-a', help=h4, metavar='', type=int, default=att)
+    # att = 1
+    # h4 = 'Attnum associated to the reqnum for the products (red_pixcor) to'
+    # h4 += ' be used. Default (Y5): {0}'.format(att)
+    # abc.add_argument('--att', '-a', help=h4, metavar='', type=int, default=att)
     h4b = 'Filename of the exposure number list (1-column, plain text) to'
     h4b += ' make a sub-selection from the reqnum/attnum'
     abc.add_argument('--exp', help=h4b, metavar='', type=str)
@@ -561,7 +561,7 @@ if __name__ == '__main__':
     #
     kw = {
         'reqnum': abc.req,
-        'attnum': abc.att,
+        # 'attnum': abc.att,
         'explist_fnm': abc.exp,
         'band_list': abc.band,
         'ccd_list': abc.ccd,
