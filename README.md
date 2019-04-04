@@ -144,6 +144,8 @@ using the following RMS values for rejection
 |   z | 0.003           |
 |   Y | 0.004           |
 |   u | 0.008           |
+|  VR | 0.008           |
+|N964 | 0.008           |
 
 ### Create the skytemplate for un-binned CCDs
 
